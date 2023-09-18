@@ -3,28 +3,31 @@ from telebot import types
 
 bot = telebot.TeleBot('6673082886:AAFC55vhG-xxfAy6nxWtc5_qDmQpumJHDn8')
 
-
 user_answers = {}
 
-questions = {
-    1: {'question': 'Район', 'options': ['Адмиралтейский', 'Василеостровский', 'Выборгский', 'Калининский', 'Кировский', 'Колпинский', 'Красногвардейский', 'Красносельский', 'Кронштадтский', 'Курортный',
-                                         'Московский', 'Невский', 'Петроградский', 'Петродворцовый', 'Приморский', 'Пушкинский', 'Фрунзенский', 'Центральный', 'Ленинградская область']},
-    2: {'question':}
-}
+
+
+
+#['Живописный вид', "Дешевый", "Для свидания", "На вынос", "Пляж", "Своя пивоварня", "Сезонные предложения", "Шведский стол"]
+
+
 # начало с кнопкой "старт"
 @bot.message_handler(commands=['start'])
 def start(message):
     user_id = message.from_user.id
-    bot.send_message(message.from_user.id, 'Привет, я BeerBarBot. Я создан для того чтобы помочь найти тебе бар по твоему запросу')
+    user_answers[user_id] = {}
+    bot.send_message(message.from_user.id,
+                     'Привет, я BeerBarBot. Я создан для того чтобы помочь найти тебе бар по твоему запросу')
     bot.send_message(message.from_user.id,
                      'Просто выбери из списка пожелания для бара')
-    bot.send_poll()
-@bot.message_handler(func=lambda message: message.text.lower() == 'ваш текст')
-def find_near(message):
-    bot.send_message(message.from_user.id,)
+    question1 = ['Центр', 'Северо-Запад', 'Север', 'Северо-Восток', 'Восток', 'Юго-Восток', 'Юг', 'Юго-Запад', 'Без разницы']
+    p1 = bot.send_poll(user_id, 'Просто выбери из списка пожелания для бара', question1, allows_multiple_answers=True)
+    payload1 = p1.poll.id: {
+        'questions':question1,
+        'message':poll_id
+    }
 
-def poll(user_id):
 
 
 
-bot.polling(none_stop=True, interval=0)  # обязательная для работы бота часть
+bot.polling(none_stop=True, interval=0)
