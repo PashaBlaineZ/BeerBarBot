@@ -60,11 +60,16 @@ def handle_poll(poll):
 def find_a_bar(user_id, user_answers):
     answers = list(user_answers[user_id].values())
     user_sides = [citysides[i] for i in answers[0]]
+    print(user_sides)
+    print(type(user_sides))
+    if 'Без разницы' in user_sides:
+        user_sides = citysides
     user_types = [bartypes[i] for i in answers[1]]
     conn = sqlite3.connect("bars.db")
     cursor = conn.cursor()
     user_id = int(user_id)
     results = []
+    found = False
     for user_side in user_sides:
         for user_type in user_types:
             cursor.execute("""
@@ -79,10 +84,18 @@ def find_a_bar(user_id, user_answers):
 
             # Получите результаты запроса и добавьте их в список результатов
             results.extend(cursor.fetchall())
-            final = results[random.randint(0, len(results))]
-    print(final)
-    bot.send_message(user_id, f'Нашёл вариант по твоим запросам:'+'\nБар называется: '+ final[1] + '\nНаходится на: '+ final[4] + '\nНомер для связи: '+ final[3])
 
+    if not results:
+        bot.send_message(user_id, 'Не нашёл вариантов по твоему запросу... попробуй ещё раз')
+    else:
+        final = random.choice(results)
+        message = f'Нашёл вариант по твоим запросам:' + '\nБар называется: ' + final[1] + '\nНаходится на: ' + \
+                    final[4] + '\nНомер для связи: ' + final[3]
+        bot.send_message(user_id, message)
+        found = True  # Устанавливаем флаг в True, так как нашли бар
+
+    if not found:
+        bot.send_message(user_id, 'Не нашёл вариантов по твоему запросу... попробуй ещё раз')
 
 
 
