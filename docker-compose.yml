@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  bot:
+    build:
+      context: .
+    container_name: "beerbarbot"
+    volumes:
+      - ./bars.db:/app/src/bars.db
+    ports:
+      - 80:80
+    networks:
+      - beerbarbot_network
+    restart: unless-stopped
+  
+
+
+networks:
+  beerbarbot_network:
+    name: beerbarbot_network
+    driver: bridge
+
