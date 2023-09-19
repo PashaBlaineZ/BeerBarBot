@@ -1,33 +1,89 @@
 import telebot
-from telebot import types
+import time
+import sqlite3
+import random
 
-bot = telebot.TeleBot('6673082886:AAFC55vhG-xxfAy6nxWtc5_qDmQpumJHDn8')
+con = sqlite3.connect("bars.db")
+
+cur = con.cursor()
+
+bot = telebot.TeleBot('6594295485:AAEhDrdkD0L5Fvem3qdTPz7jmT9JUR6bd0c')
+
+citysides = ['Центр', 'Северо-Запад', 'Север', 'Северо-Восток', 'Восток', 'Юго-Восток', 'Юг', 'Юго-Запад', 'Без разницы']
+bartypes = ['Дешевое','Дорогое', 'Для свидания', 'Для большой компании', 'Выпить в одиночку', 'Живая музыка', 'Высокие оценки', 'Атмосфера', 'Вкусная еда', 'Кальяны и лаунж-зона']
+question1 = {'question':'Выбери район, в котором ты хочешь найти бар:', 'options': citysides}
+question2 = {'question': 'Выбери тип бара, который ты предпочитаешь:', 'options': bartypes}
 
 user_answers = {}
+user_states = {}
 
+for characteristic in bartypes:
+    cur.execute("INSERT INTO bar_characteristics (characteristic_name) VALUES (?)", (characteristic,))
 
-
-
-#['Живописный вид', "Дешевый", "Для свидания", "На вынос", "Пляж", "Своя пивоварня", "Сезонные предложения", "Шведский стол"]
-
-
-# начало с кнопкой "старт"
+con.commit()
 @bot.message_handler(commands=['start'])
 def start(message):
     user_id = message.from_user.id
     user_answers[user_id] = {}
-    bot.send_message(message.from_user.id,
-                     'Привет, я BeerBarBot. Я создан для того чтобы помочь найти тебе бар по твоему запросу')
+    user_states[user_id] = 'question1'
+    bot.send_message(message.chat.id,
+                     'Привет, я BarNet. Я создан для того чтобы помочь найти тебе бар по твоему запросу')
+    time.sleep(2)
     bot.send_message(message.from_user.id,
                      'Просто выбери из списка пожелания для бара')
-    question1 = ['Центр', 'Северо-Запад', 'Север', 'Северо-Восток', 'Восток', 'Юго-Восток', 'Юг', 'Юго-Запад', 'Без разницы']
-    p1 = bot.send_poll(user_id, 'Просто выбери из списка пожелания для бара', question1, allows_multiple_answers=True)
-    payload1 = p1.poll.id: {
-        'questions':question1,
-        'message':poll_id
-    }
+    time.sleep(2)
+    bot.send_poll(user_id, question=question1['question'], options=question1['options'],
+                  allows_multiple_answers=True, is_anonymous=False)
+
+@bot.poll_answer_handler()
+def handle_poll(poll):
+    user_id = poll.user.id
+    question_id = poll.poll_id
+    option_ids = poll.option_ids
+    user_answers[user_id][question_id] = option_ids
+
+    current_state = user_states.get(user_id)
+
+    if current_state == 'question1':
+        user_states[user_id] = 'question2'
+
+        bot.send_poll(user_id, question=question2['question'], options=question2['options'],
+                      allows_multiple_answers=True, is_anonymous=False)
+    elif current_state == 'question2':
+        user_states.pop(user_id)
+        bot.send_message(user_id, 'Спасибо за ответы. Сейчас попробую подобрать что-нибудь для вас...')
+        time.sleep(2)
+
+        find_a_bar(user_id, user_answers)
+
+
+def find_a_bar(user_id, user_answers):
+    answers = list(user_answers[user_id].values())
+    user_sides = [citysides[i] for i in answers[0]]
+    user_types = [bartypes[i] for i in answers[1]]
+    conn = sqlite3.connect("bars.db")
+    cursor = conn.cursor()
+    user_id = int(user_id)
+    results = []
+    for user_side in user_sides:
+        for user_type in user_types:
+            cursor.execute("""
+                SELECT *
+                FROM bars
+                WHERE side = ? OR bar_id IN (
+                    SELECT bar_id
+                    FROM bar_characteristic_relationship
+                    WHERE characteristic_id = ?
+                )
+            """, (user_side, user_type))
+
+            # Получите результаты запроса и добавьте их в список результатов
+            results.extend(cursor.fetchall())
+            final = results[random.randint(0, len(results))]
+    print(final)
+    bot.send_message(user_id, f'Нашёл вариант по твоим запросам:'+'\nБар называется: '+ final[1] + '\nНаходится на: '+ final[4] + '\nНомер для связи: '+ final[3])
 
 
 
 
-bot.polling(none_stop=True, interval=0)
+bot.infinity_polling()
